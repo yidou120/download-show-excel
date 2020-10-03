@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<a onclick="readData()">点我下载</a>
+<div id="htmlout"></div>
+</body>
+</html>
+<script type="text/javascript">
+    var cDg
+    var HTMLOUT = document.getElementById('htmlout')
+    function readData() {
+        var xmlHttp; //ajax请求状态码0
+        if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {// code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.responseType = "blob"
+        //2.为引擎对象绑定监听事件 (设置回调函数)
+        xmlhttp.onreadystatechange = function () {
+            //等待服务器响应
+            if (xmlhttp.readyState == 4) {
+                //当请求状态为4时，说明请求完成
+                if (xmlhttp.status == 200) {
+                    //判断服务器响应状态吗是否正常
+                    //取出响应的数据
+                    var result = xmlhttp.response;
+                    console.log(result)
+                    if (window.FileReader) {
+                        var reader = new FileReader()
+                    } else {
+                        alert('不支持')
+                    }
+                    if (result) {
+                        // 弹出文件保存弹框
+                        var a = document.createElement("a")
+                        a.style.display = 'none'
+                        a.href = window.URL.createObjectURL(result)
+                        var content = xmlhttp.getResponseHeader('Content-Disposition')
+                        console.log(content)
+                        var start = content.indexOf('fileName=')
+                        console.log(start)
+                        content = content.substring(start + 9)
+                        a.download = decodeURI(content) + '.xlsx'
+                        a.click()
+                        reader.readAsBinaryString(result)
+                        reader.onload = function () {
+                            var wb = XLSX.read(reader.result, {type: 'binary'})
+                            var wsName = wb.SheetNames[0]
+                            console.log(wsName);
+                            var data = XLSX.utils.sheet_to_json(wb.Sheets[wsName])
+                            console.log(data);
+                            if (!cDg) cDg = canvasDatagrid({parentNode: HTMLOUT, data: data});
+                            cDg.style.height = '100%';
+                            cDg.style.width = '100%';
+                            cDg.data = data;
+                        }
+                    }
+                }
+            }
+        }
+        xmlhttp.open("POST", "http://localhost:8080/file/download", true);
+        xmlhttp.send()
+    }
+</script>
+<script src="https://lib.baomitu.com/jquery/3.5.0/jquery.js" type="text/javascript"></script>
+<script src="https://unpkg.com/canvas-datagrid/dist/canvas-datagrid.js"></script>
+<script src="/static/xlsx.full.min.js" th:src="@{/xlsx.full.min.js}" type="text/javascript"></script>
